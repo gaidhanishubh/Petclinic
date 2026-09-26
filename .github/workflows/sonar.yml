@@ -1,38 +1,39 @@
-name: Build
+name: SonarQube Scan (Java/Maven)
 
 on:
   push:
-    branches:
-      - sonar
-
+    branches: [sonar]
+#  pull_request:
+ #   types: [opened, synchronize, reopened]
 
 jobs:
-  build:
-    name: Build
+  sonar-analysis:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up JDK 11
-        uses: actions/setup-java@v1
+          fetch-depth: 0 # Required for accurate blame/history analysis
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          java-version: 11
+          java-version: '17' # Change to '21' or your specific Spring Boot Java version
+          distribution: 'temurin'
+          cache: 'maven' # Speeds up subsequent builds by caching dependencies
+
       - name: Cache SonarQube packages
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
-        uses: actions/cache@v1
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
+
+      - name: Build and Analyze
         env:
-         # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=My-Spring-APP
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} # Leave out if using SonarCloud
+        run: |
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=My-Spring-APP \
+            -Dsonar.projectName="Your Spring Boot App"
